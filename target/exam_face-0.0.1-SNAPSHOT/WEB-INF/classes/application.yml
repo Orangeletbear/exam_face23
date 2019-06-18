@@ -1,0 +1,44 @@
+sys:
+  version: 1.0.3
+
+setting:
+  weichat:
+    appId: wxdb9db1646261e5f6
+    AppSecret: 40fdcd697d3ccaaebafe7e53ad4ee25b
+
+server:
+  tomcat:
+    accesslog:
+      enabled: true
+      directory: /www/access_log
+      pattern: '%h %l %u [%{yyyy-MM-dd HH:mm:ss.SSS}t] "%r" %s %b %D'
+      prefix: exam_face_access
+      suffix: .log
+    basedir: /www/tmp
+
+com.gsp.weichat: DEBUG
+
+spring:
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/exam_face?zeroDateTimeBehavior=convertToNull&useUnicode=true&characterEncoding=UTF8&useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC
+    username: exam_face
+    password: tfD3CpmDmKZXJbwt
+    hikari:
+      auto-commit: false
+      minimum-idle: 2
+      maximum-pool-size: 10
+      connection-timeout: 10000
+      max-lifetime: 600000
+      idle-timeout: 60000
+      validation-timeout: 1000
+      leak-detection-threshold: 30000
+
+logging: 
+  level:
+    io: 
+      swagger: 
+        models: 
+          parameters: 
+            AbstractSerializableParameter: ERROR

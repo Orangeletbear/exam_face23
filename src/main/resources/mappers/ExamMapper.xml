@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+        
+<mapper namespace="com.gsp.weichat.core.mapper.ExamMapper">
+	
+	<!-- 创建汇总表 -->
+	<insert id="newAnswerCollect">
+		insert into answer_collect
+			(user_id,total_score,answer_total_true,
+			 answer_total_false,answer_total)
+		values
+			(#{user_id},0,0,0,0)
+	</insert>
+	
+	<!-- 创建每日记录 -->
+	<insert id="newAnswerDay" parameterType="long">
+		insert into answer_statistics_day
+			(user_id,answer_total_true,answer_total_false,
+			 answer_total,total_score_now,answer_time)
+		values
+			(#{user_id},0,0,0,0,now())
+	</insert>
+	
+	<!-- 生成答题记录 -->
+	<insert id="record" parameterType="com.gsp.weichat.pojo.AnswerRecord">
+		insert into answer_record 
+			(question_id,submit_option,true_or_false,
+		 	 user_id,correct_option,answer_time,knowledge_area,score)
+		values
+			(#{question_id},#{submit_option},#{true_or_false},
+			 #{user_id},#{correct_option},#{answer_time},
+			 #{knowledge_area},#{score})
+	</insert>
+	
+	<!-- 查询近五次的答题记录 -->
+	<select id="answerDay" parameterType="long" resultType="com.gsp.weichat.pojo.AnswerDay">
+		select answer_statistics_day_id,user_id,answer_total_true,
+			 answer_total_false,answer_total,total_scroe_day,
+			 answer_time
+		from answer_statistics_day
+		where user_id = #{user_id}
+		order by answer_time desc
+		limit 0,5
+	</select>
+	
+	<resultMap type="com.gsp.weichat.pojo.Question" id="randomQuestion_map">
+		<id property="ID" column="ID"/>
+		<result property="CONTENT" column="CONTENT"/>
+		<result property="ANSWER" column="ANSWER"/>
+		<result property="KNOWLEDGE_AREA" column="KNOWLEDGE_AREA"/>
+		
+		<result property="CREATED_DATE" column="CREATED_DATE"/>
+		<collection property="options" 
+		ofType="com.gsp.weichat.pojo.Option">
+			<id property="ID" column="OID"/>
+			<result property="OPTION_CONTENT" column="OPTION_CONTENT"/>
+			<result property="OPTION" column="OPTION"/>
+			<result property="QUESTION_ID" column="QUESTION_ID"/>
+			
+			<result property="CREATED_DATE" column="OCREATED_DATE"/>
+		</collection>
+	</resultMap>
+	
+	<!-- 随机查询一道题 -->
+	<select id="randomQuestion" parameterType="int" 
+	resultMap="randomQuestion_map">
+		select question.ID,question.CONTENT,question.ANSWER,question.KNOWLEDGE_AREA,
+			 question.CREATED_DATE,option.ID,option.OPTION_CONTENT,option.OPTION,
+			 option.QUESTION_ID,option.CREATED_DATE
+		from (
+			select ID,CONTENT,ANSWER,KNOWLEDGE_AREA,CREATED_DATE
+			from question
+			limit #{index},1) as question join `option`
+		on question.ID = option.QUESTION_ID
+		where option.QUESTION_ID = question.ID
+	</select>
+	
+	<!-- 查询每日记录 -->
+	<select id="findAnswerDayIdByUserIdAndTime" parameterType="long"  resultType="java.lang.Long">
+		select answer_statistics_day_id 
+		from answer_statistics_day
+		where user_id = #{user_id} and answer_time like '${time}%'
+	</select>
+	
+	<!-- 查询汇总表id -->
+	<select id="findAnswerCollectIdByUserId" parameterType="long" resultType="java.lang.Long">
+		select answer_collect_id
+		from answer_collect
+		where user_id = #{user_id}
+	</select>
+	
+	<!-- 查询前50名用户信息 -->
+	<select id="getTop50" resultType="com.gsp.weichat.pojo.dto.UserRankingInfo">
+		select user.user_id,user.nickname,user.head_portrait,user.city,
+			 collect.total_score,collect.ranking
+		from
+		 `user` join (
+				select user_id,total_score,@i := @i + 1 as ranking
+				from 
+					answer_collect join (select @i := 0) as init
+				order by total_score desc
+				limit 0,50) as collect
+		on user.user_id = collect.user_id
+		order by ranking asc
+	</select>
+	
+	<!-- 根据用户id查询用户的总分 -->
+	<select id="findScoreByUserId" parameterType="long" resultType="int">
+		select total_score
+		from answer_collect
+		where user_id = #{user_id}
+	</select>
+	
+	<!-- 答题正确更新每日答题表 -->
+	<update id="AnswerDayTrue" parameterType="long">
+		update answer_statistics_day
+		set
+			answer_total_true = answer_total_true + 1,
+			answer_total = answer_total + 1,
+			total_score_now = total_score_now + 2,
+			total_scroe_day = total_score_now
+		where answer_statistics_day_id = #{table_id}
+	</update>
+	
+	<!-- 答题正确更新汇总表 -->
+	<update id="AnswerCollectTrue" parameterType="long">
+		update answer_collect
+		set
+			total_score = total_score + 2,
+			answer_total_true = answer_total_true + 1,
+			answer_total = answer_total + 1
+		where answer_collect_id = #{table_id}
+	</update>
+	
+	<!-- 答题错误更新每日答题表 -->
+	<update id="AnswerDayFalse" parameterType="long">
+		update answer_statistics_day
+		set
+			answer_total_false = answer_total_false + 1,
+			answer_total = answer_total + 1,
+			total_score_now = total_score_now - 1,
+			total_scroe_day = total_score_now
+		where answer_statistics_day_id = #{table_id}
+	</update>
+	
+	<!-- 答题错误更新汇总表 -->
+	<update id="AnswerCollectFalse" parameterType="long">
+		update answer_collect
+		set
+			total_score = total_score - 1,
+			answer_total_false = answer_total_false + 1,
+			answer_total = answer_total + 1
+		where answer_collect_id = #{table_id}
+	</update>
+</mapper>

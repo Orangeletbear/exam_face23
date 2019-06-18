@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+        
+<mapper namespace="com.gsp.weichat.core.mapper.UserMapper">
+	<sql id="userColum">
+		`open_id`,`head_portrait`,`nickname`,`country`,
+		`province`,`city`,`create_time`,`baidu_token`
+	</sql>
+	<insert id="saveUserInfo" parameterType="com.gsp.weichat.pojo.User">
+		insert into `user`
+		(<include refid="userColum"/>)
+		values
+		(#{open_id},#{head_portrait},#{nickname},#{country},
+		 #{province},#{city},#{create_time},#{baidu_token})
+	</insert>
+	
+	<resultMap type="com.gsp.weichat.pojo.User" 
+				id="findUserByOpenId_map">
+		<id property="user_id" column="user_id"/>
+		<result property="open_id" column="open_id"/>
+		<result property="head_portrait" column="head_portrait"/>
+		<result property="nickname" column="nickname"/>
+		<result property="country" column="country"/>
+		
+		<result property="province" column="province"/>
+		<result property="city" column="city"/>
+		<result property="create_time" column="create_time"/>
+		<result property="baidu_token" column="baidu_token"/>
+	</resultMap>
+	
+	<select id="findUserByOpenId" parameterType="string" 
+			resultMap="findUserByOpenId_map">
+		select `user_id`,<include refid="userColum"/>
+		from `user`
+		where `open_id` = #{openId}
+	</select>
+	
+	<resultMap type="com.gsp.weichat.pojo.dto.CollectInfo" 
+	id="getConllectInfo_map">
+	
+		<id property="user_id" column="user_id"/>
+		<result property="nickname" column="nickname"/>
+		<result property="head_portrait" column="head_portrait"/>
+		<result property="answer_collect_id" column="answer_collect_id"/>
+		<result property="total_score" column="total_score"/>
+		
+		<result property="answer_total_true" column="answer_total_true"/>
+		<result property="answer_total_false" column="answer_total_false"/>
+		<result property="answer_total" column="answer_total"/>
+		<result property="ranking" column="ranking"/>
+		
+		<collection property="area" ofType="java.lang.String">
+			<result column="area_info"/>
+		</collection>
+	</resultMap>
+	
+	<select id="getConllectInfo" parameterType="long" resultMap="getConllectInfo_map">
+		select user.user_id,user.nickname,user.head_portrait,collect_and_area.total_score,
+			 collect_and_area.answer_total_true,collect_and_area.answer_total_false,collect_and_area.answer_total,
+			 collect_and_area.ranking,collect_and_area.area_info, collect_and_area.answer_collect_id
+		from `user` left join
+			(select rank.total_score,rank.user_id,rank.answer_collect_id,
+					 rank.answer_total_true,rank.answer_total_false,rank.answer_total,
+					 rank.ranking,area.area_info
+				from
+						(select answer_collect_id,total_score,answer_total_true,
+										answer_total_false,answer_total,`user_id`,@i := @i + 1 as ranking
+						 from `answer_collect` join (select @i := 0) as `init`
+						 order by `total_score` desc) as rank left join
+						(select `user_id`,`knowledge_area` as area_info,count(*) as `total`
+						 from `answer_record`
+						 where user_id = #{user_id} and true_or_false = 1
+						 group by `knowledge_area`
+						 order by `total` desc
+						 limit 0,3) as area
+				on rank.user_id = area.user_id
+				where rank.user_id = #{user_id}) as collect_and_area
+		on user.user_id = collect_and_area.user_id
+		where user.user_id = #{user_id}
+	</select>
+</mapper>

@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Built-By: YancyChong
+Build-Jdk: 9.0.4
+Implementation-Title: exam_face
+Implementation-Version: 0.0.1-SNAPSHOT
+Implementation-Vendor-Id: com.gsp.weichat
+Implementation-URL: https://projects.spring.io/spring-boot/#/spring-bo
+ ot-starter-parent/exam_face
+Created-By: Maven Integration for Eclipse
+
